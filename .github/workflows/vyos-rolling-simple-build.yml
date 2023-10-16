@@ -48,6 +48,22 @@ jobs:
           minisign_key: ${{ secrets.minisign_key }}
           minisign_password: ${{ secrets.minisign_password }}
 
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vyos-${{ env.VYOS_VERSION }}-amd64.iso
+          path: ./vyos-${{ env.VYOS_VERSION }}-amd64.iso
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload ISO's Minisign artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vyos-${{ env.VYOS_VERSION }}-amd64.iso.minisig
+          path: ./vyos-${{ env.VYOS_VERSION }}-amd64.iso.minisig
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Publish release
         uses: softprops/action-gh-release@v1
         with:
