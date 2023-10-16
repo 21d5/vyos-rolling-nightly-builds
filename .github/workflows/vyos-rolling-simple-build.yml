@@ -27,15 +27,26 @@ jobs:
           commit_message: ${{ env.VYOS_VERSION }}
 
       - name: Git clone vyos-build
-        run: git clone -b current --single-branch https://github.com/vyos/vyos-build
+        run: git clone -b sagitta --single-branch https://github.com/vyos/vyos-build
 
       - name: Build ISO
         run: |
-          docker run --rm --privileged -v ./vyos-build/:/vyos -w /vyos vyos/vyos-build:current sudo --preserve-env ./build-vyos-image --architecture amd64 --build-by "autobuild@vyos.net" --vyos-mirror https://rolling-packages.vyos.net/current/ --debian-mirror http://deb.debian.org/debian/ --build-type release --version "${VYOS_VERSION}" iso
+          docker run --rm --privileged -v ./vyos-build/:/vyos -w /vyos vyos/vyos-build:sagitta sudo --preserve-env ./build-vyos-image --architecture amd64 --build-by "autobuild@vyos.net" --vyos-mirror https://rolling-packages.vyos.net/sagitta/ --debian-mirror http://deb.debian.org/debian/ --build-type release --version "${VYOS_VERSION}" iso
 
       - name: Copy ISO
         run: |
           cp ./vyos-build/build/live-image-amd64.hybrid.iso ./vyos-$VYOS_VERSION-amd64.iso
+
+      - name: Sign ISO (Minisign)
+        run: |
+          echo 'untrusted comment: minisign encrypted secret key' > minisign.key
+          echo $minisign_key >> minisign.key
+          shasum minisign.key
+          echo $minisign_password | $GITHUB_WORKSPACE/bin/minisign -s minisign.key -Sm ./vyos-$VYOS_VERSION-amd64.iso
+          $GITHUB_WORKSPACE/bin/minisign -Vm ./vyos-$VYOS_VERSION-amd64.iso -x ./vyos-$VYOS_VERSION-amd64.iso.minisig -p $GITHUB_WORKSPACE/minisign.pub
+        env:
+          minisign_key: ${{ secrets.minisign_key }}
+          minisign_password: ${{ secrets.minisign_password }}
 
       - name: Publish release
         uses: softprops/action-gh-release@v1
